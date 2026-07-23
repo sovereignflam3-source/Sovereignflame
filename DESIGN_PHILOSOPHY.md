@@ -62,22 +62,26 @@ This site should be built as a component-driven, content-forward project. A reco
 
 Design tokens should be the first implementation artifact. They should be stored in a single source of truth and exposed through both CSS custom properties and JS/TS values.
 
-### Color tokens
+### Color direction
 
-Use a restrained palette built from material references: wax, paper, ink, bronze, candlelight.
+The approved visual field is charcoal with a dark ember orange accent, warm neutral text, and sparing use of black for depth.
 
-- `background-base`: `#F3EFE7` (soft parchment)
-- `surface-muted`: `#E4DED4` (aged paper)
-- `surface`: `#D9D2C7` (warm stone)
-- `ink`: `#1F1A16` (deep charcoal)
-- `ink-muted`: `#4F473F` (soft graphite)
-- `bronze`: `#9B7B5D` (aged metal)
-- `candle`: `#B88A56` (warm flame)
-- `seal`: `#6F3F34` (burnt umber)
-- `ember`: `#8F2E1F` (reserved accent)
-- `shadow`: `rgba(31, 26, 22, 0.12)`
+- Primary field: charcoal
+- Accent: dark ember orange
+- Supporting depth: black used sparingly
+- Text: warm light neutral for readability
+- Avoid bright orange, neon, Halloween-like contrast, or overly saturated accents
+- The orange should feel like pumpkin pie, dark terracotta, or low-burning embers
 
-Use the accent colors with great restraint. The site should feel monochromatic with warm highlights rather than saturated.
+Use accents with great restraint. The site should feel anchored by tonal depth and texture rather than by saturation.
+
+### Typography direction
+
+The typographic system should feel clearly legible, slightly elegant, and refined without being flashy, arrogant, gothic, or overly decorative.
+
+- Serif headings paired with a clean sans-serif body font is the current preference
+- The system should support hierarchy with calm authority and clear readability
+- Final font selection remains pending visual testing and should be confirmed once palette, layout, and content are aligned
 
 ### Typography tokens
 
