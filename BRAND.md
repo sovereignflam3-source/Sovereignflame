@@ -1,6 +1,6 @@
 # BRAND
 
-Sovereign Flame is a brand of quiet mastery. It embodies the feeling of a candlelit atelier, a handwritten note pressed into wax, and a master craftsperson bringing a guest into a room of purposeful tools.
+Sovereign Flame is a brand of quiet mastery and measured capability. It embodies the feeling of a candlelit atelier, a signet pressed into wax, and a master craftsman guiding a visitor through a room of purposeful tools.
 
 ## Emotional tone
 
@@ -8,30 +8,31 @@ Sovereign Flame is a brand of quiet mastery. It embodies the feeling of a candle
 - Warmth through attention
 - Sophistication without stiffness
 - Mystery that suggests depth, never confusion
-- Comfort for those who value quality
+- Practical resolve for difficult work
+- Curiosity tempered by discipline
 
 ## Visual archetypes
 
-- The Workshop: a calm, dimly lit space where tools and materials are arranged with intention.
+- The Workshop: an active, exacting space where tools and materials are arranged with intent.
 - The Signet: a tactile emblem pressed into wax, leaving an impression that endures.
-- The Library: a collection of carefully chosen volumes, each with a story and a weight.
-- The Master Craftsman: steady hands, practiced gestures, and the quiet authority of expertise.
+- The Master Craftsman: capable hands, steady judgment, and the authority of earned skill.
+- The Investigator: someone who can take unfinished ideas and determine what they need next.
 
 ## Color philosophy
 
 The palette is grounded in natural, warm materials.
 
-- Base tones should feel like parchment, leather, and stone.
-- Accent tones should feel like candlelight, aged bronze, and burnished seal wax.
+- Base tones should feel like parchment, stone, and worked metal.
+- Accent tones should feel like candlelight, aged bronze, and seal wax.
 - Contrast should be elegant and soft rather than harsh.
-- Use color conservatively; the world is defined by texture and tone more than saturation.
+- Use color conservatively; the world is defined by texture, tone, and intent more than saturation.
 
 ## Typography philosophy
 
 Typography is a voice, not decoration.
 
-- Headings should feel expressive and considered, like the title on a book cover.
-- Body text should be readable and warm, inviting the reader to linger.
+- Headings should feel expressive and exacting, like a title on a hand-bound volume.
+- Body text should be readable and warm, inviting the reader to linger with clarity.
 - UI text should be discreet, functional, and calm.
 - The type system should support hierarchy in a way that feels natural and intentional.
 
@@ -41,6 +42,7 @@ Typography is a voice, not decoration.
 - Human, but not colloquial or casual.
 - Precise without being ornate.
 - Avoid jargon, hype, and generic marketing phrases.
+- Be direct about scope, next steps, and what is required.
 - Focus on the visitor’s experience and the craft behind the work.
 
 ### Voice examples
@@ -51,31 +53,33 @@ Typography is a voice, not decoration.
 ## Client experience
 
 - Visitors should feel welcomed rather than sold to.
-- The journey should be guided but not pushed.
+- The journey should be guided, not pushed.
 - Every interaction should feel purposeful and respectful.
-- The overall impression should be of a trusted partner with deep expertise.
+- Visitors should know the brand can build, investigate, learn, or refer responsibly.
+- The brand should create confidence for unfinished, unusual, or difficult ideas.
 
 ## What Sovereign Flame is NOT
 
-- Not a flashy startup.
-- Not a technology showcase.
-- Not loud, bright, or gimmicky.
+- Not a stationery studio.
+- Not a passive luxury retreat.
+- Not a lifestyle brand.
+- Not a timid consultancy.
+- Not a purely atmospheric experience.
 - Not a generic SaaS pitch.
-- Not overly casual.
-- Not a space for quick, uninformed decisions.
+- Not a technology showcase.
 
 ## How visitors should feel
 
-- Seen: the experience responds to their desire for refinement.
+- Seen: their ideas are understood, even when unfinished.
 - Comfortable: the design is warm and composed.
 - Curious: there is enough subtle mystery to invite deeper attention.
 - Confident: the site feels trustworthy and steady.
-- Invited: the brand feels like an elegant host.
+- Guided: the experience points toward useful next steps.
 
 ## How trust is earned
 
 - Through consistency and attention to detail.
 - Through clarity and honesty in language.
-- Through quiet, well-crafted visual presentation.
-- Through a tone that respects the visitor’s intelligence.
-- Through a sense of craftsmanship rather than commerce.
+- Through quiet, capable visual presentation.
+- Through strategic thinking and honest project direction.
+- Through a willingness to say what can be built, what needs research, and when a referral is the stronger choice.
