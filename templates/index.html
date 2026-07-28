@@ -20,7 +20,132 @@
           <p class="support">Bring us the unusual, unfinished, or difficult. We’ll tell you what can be built, what should be learned, and when another specialist is the wiser choice.</p>
         </section>
 
-        <section class="imp-shell" aria-labelledby="imp-heading">
+        <section class="workshop" aria-labelledby="workshop-heading">
+          <header class="workshop-intro">
+            <div>
+              <p class="eyebrow">Selected Works</p>
+              <h2 id="workshop-heading">The Workshop</h2>
+            </div>
+            <p>Every build begins with a real problem. We study what is failing, translate what matters, and return something useful.</p>
+          </header>
+
+          <div class="workshop-ledger">
+            <article class="work-entry">
+              <div class="work-rail">
+                <span class="work-number" aria-hidden="true">01</span>
+                <p class="work-type">Small-business website</p>
+              </div>
+              <div class="work-body">
+                <h3>Hippity Hoppity Clean</h3>
+                <dl class="work-stages">
+                  <div class="work-stage">
+                    <dt>Problem</dt>
+                    <dd>A local cleaning company needed a public presence that felt warm, trustworthy, and easy for customers to use on a phone.</dd>
+                  </div>
+                  <div class="work-stage">
+                    <dt>Build</dt>
+                    <dd>Sovereign Flame created a responsive service website, organized the company’s services and proof of work, repaired mobile gallery issues, and improved the readability of customer reviews.</dd>
+                  </div>
+                  <div class="work-stage">
+                    <dt>Result</dt>
+                    <dd>The business received a polished, practical website that can be confidently shared with prospective customers.</dd>
+                  </div>
+                </dl>
+              </div>
+            </article>
+
+            <article class="work-entry">
+              <div class="work-rail">
+                <span class="work-number" aria-hidden="true">02</span>
+                <p class="work-type">Custom estimating software</p>
+              </div>
+              <div class="work-body">
+                <h3>Quote Goat</h3>
+                <dl class="work-stages">
+                  <div class="work-stage">
+                    <dt>Problem</dt>
+                    <dd>Flooring estimates depended on practical knowledge held in one contractor’s head, including labor rates, waste factors, difficult access, room conditions, and material-specific judgment.</dd>
+                  </div>
+                  <div class="work-stage">
+                    <dt>Build</dt>
+                    <dd>Sovereign Flame translated that experience into a structured quoting engine with multi-room support, contractor-specific overrides, waste calculations, access surcharges, and pricing logic derived from real field practice.</dd>
+                  </div>
+                  <div class="work-stage">
+                    <dt>Result</dt>
+                    <dd>Informal contractor judgment became reusable software that can produce more consistent, explainable estimates.</dd>
+                  </div>
+                </dl>
+                <p class="work-aside">The goat may scream. The mathematics remains composed.</p>
+              </div>
+            </article>
+
+            <article class="work-entry">
+              <div class="work-rail">
+                <span class="work-number" aria-hidden="true">03</span>
+                <p class="work-type">Structured inquiry system</p>
+              </div>
+              <div class="work-body">
+                <header class="work-title">
+                  <div>
+                    <h3>IMP</h3>
+                    <p>Interactive Model Processor</p>
+                  </div>
+                  <span class="live-marker"><span aria-hidden="true"></span>Live on this page</span>
+                </header>
+                <dl class="work-stages">
+                  <div class="work-stage">
+                    <dt>Problem</dt>
+                    <dd>Traditional contact forms expect visitors to already know how to describe a technical project, often producing vague or incomplete inquiries.</dd>
+                  </div>
+                  <div class="work-stage">
+                    <dt>Build</dt>
+                    <dd>Sovereign Flame created an interactive inquiry steward that gathers project details, classifies likely work, explains fixed-price starting ranges, recognizes mixed scopes and budget mismatches, and prepares an editable report for review.</dd>
+                  </div>
+                  <div class="work-stage">
+                    <dt>Result</dt>
+                    <dd>Visitors receive guidance while Sovereign Flame receives a clearer, more useful project brief before the first human conversation.</dd>
+                  </div>
+                </dl>
+                <a class="workshop-action" href="#imp" data-imp-link>Meet IMP <span aria-hidden="true">↓</span></a>
+              </div>
+            </article>
+          </div>
+
+          <section class="forge-process" aria-labelledby="forge-process-heading">
+            <header>
+              <p class="eyebrow">From Question to Craft</p>
+              <h3 id="forge-process-heading">How the Forge Works</h3>
+              <p>An inquiry begins a review, not an automatic acceptance. Unusual ideas are welcome. Saeva defines a fixed price around agreed scope, and each accepted build is reviewed and tested before delivery. If another specialist is wiser, Sovereign Flame will say so.</p>
+            </header>
+            <ol>
+              <li><span>01</span>Bring the problem</li>
+              <li><span>02</span>IMP prepares the brief</li>
+              <li><span>03</span>Saeva reviews the inquiry</li>
+              <li><span>04</span>Scope and fixed price are agreed</li>
+              <li><span>05</span>We build and test</li>
+              <li><span>06</span>You receive the finished work</li>
+            </ol>
+          </section>
+
+          <section class="house-standards" aria-labelledby="standards-heading">
+            <h3 id="standards-heading">Standards of the House</h3>
+            <ul>
+              <li>Fixed scope and fixed pricing</li>
+              <li>Mobile-conscious design</li>
+              <li>Accessible interaction</li>
+              <li>Tested before delivery</li>
+              <li>Honest technical guidance</li>
+              <li>No promises we cannot keep</li>
+            </ul>
+          </section>
+
+          <footer class="workshop-cta">
+            <p>Have something unusual, unfinished, or difficult?</p>
+            <a class="primary-action" href="#imp" data-imp-link>Bring it to IMP <span aria-hidden="true">↓</span></a>
+          </footer>
+        </section>
+
+        <section class="imp-shell" id="imp" tabindex="-1" aria-labelledby="imp-heading">
           <div class="imp-header">
             <div>
               <p class="imp-kicker">Interactive Model Processor</p>
@@ -86,6 +211,7 @@
     </template>
 
     <script src="{{ url_for('static', filename='js/imp.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/workshop.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/ember.js') }}"></script>
   </body>
 </html>

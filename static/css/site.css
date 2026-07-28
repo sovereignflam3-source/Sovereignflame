@@ -136,12 +136,329 @@ body {
   max-width: 44rem;
 }
 
+.workshop {
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 0.4rem;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.025), transparent 36%),
+    rgba(13, 12, 11, 0.56);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.035),
+    inset 0 -1px 0 rgba(0,0,0,0.36);
+  overflow: hidden;
+}
+
+.workshop-intro {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.72fr) minmax(18rem, 1.28fr);
+  gap: clamp(1.5rem, 5vw, 4rem);
+  align-items: end;
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  border-bottom: 1px solid var(--border);
+}
+
+.workshop-intro .eyebrow,
+.forge-process .eyebrow {
+  margin: 0 0 0.55rem;
+}
+
+.workshop-intro h2,
+.work-body h3,
+.forge-process h3,
+.house-standards h3 {
+  margin: 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.workshop-intro h2 {
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  line-height: 1;
+}
+
+.workshop-intro > p {
+  max-width: 39rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.03rem;
+  line-height: 1.8;
+}
+
+.workshop-ledger {
+  display: grid;
+}
+
+.work-entry {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  border-bottom: 1px solid var(--border);
+}
+
+.work-entry:nth-child(even) {
+  background: rgba(255,255,255,0.015);
+}
+
+.work-rail {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.75rem 1.4rem;
+  border-right: 1px solid var(--border);
+}
+
+.work-number {
+  color: rgba(168, 90, 56, 0.76);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 2.35rem;
+  line-height: 1;
+}
+
+.work-type {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.55;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.work-body {
+  min-width: 0;
+  padding: clamp(1.75rem, 4vw, 2.6rem);
+}
+
+.work-body > h3,
+.work-title h3 {
+  font-size: clamp(1.75rem, 3.6vw, 2.45rem);
+  line-height: 1.05;
+}
+
+.work-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.work-title p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.live-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.48rem;
+  flex: 0 0 auto;
+  padding: 0.42rem 0.58rem;
+  border: 1px solid rgba(168, 90, 56, 0.34);
+  border-radius: 999px;
+  color: #d8b39d;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.live-marker > span {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: #c66d43;
+  box-shadow: 0 0 0.5rem rgba(198, 109, 67, 0.55);
+}
+
+.work-stages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 1.55rem 0 0;
+}
+
+.work-stage {
+  min-width: 0;
+  padding: 0 1.2rem;
+  border-left: 1px solid var(--border);
+}
+
+.work-stage:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.work-stage:last-child {
+  padding-right: 0;
+}
+
+.work-stage dt {
+  margin-bottom: 0.55rem;
+  color: #d19a79;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.work-stage dd {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.72;
+}
+
+.work-aside {
+  margin: 1.4rem 0 0;
+  color: rgba(232, 223, 212, 0.72);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 1.02rem;
+  font-style: italic;
+}
+
+.workshop-action {
+  display: inline-flex;
+  min-height: 2.75rem;
+  margin-top: 1.45rem;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--text);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-decoration-color: rgba(168, 90, 56, 0.72);
+  text-underline-offset: 0.35rem;
+  text-transform: uppercase;
+}
+
+.workshop-action:hover {
+  color: #f4e9dc;
+  text-decoration-color: #c66d43;
+}
+
+.workshop-action:focus-visible,
+.workshop-cta .primary-action:focus-visible,
+.imp-shell:focus-visible {
+  outline: 2px solid rgba(232, 223, 212, 0.52);
+  outline-offset: 4px;
+}
+
+.forge-process {
+  display: grid;
+  grid-template-columns: minmax(14rem, 0.75fr) minmax(20rem, 1.25fr);
+  gap: clamp(1.5rem, 5vw, 4rem);
+  padding: clamp(1.75rem, 4vw, 2.75rem);
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.13);
+}
+
+.forge-process h3,
+.house-standards h3 {
+  font-size: 1.55rem;
+}
+
+.forge-process header > p:last-child {
+  margin: 0.85rem 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.forge-process ol {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: forge-stage;
+}
+
+.forge-process li {
+  min-height: 4.25rem;
+  padding: 0.85rem 1rem;
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.forge-process li:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+
+.forge-process li span {
+  display: block;
+  margin-bottom: 0.32rem;
+  color: rgba(209, 154, 121, 0.72);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+}
+
+.house-standards {
+  padding: clamp(1.5rem, 4vw, 2.25rem) clamp(1.75rem, 4vw, 2.75rem);
+  border-bottom: 1px solid var(--border);
+}
+
+.house-standards ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 1.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.house-standards li {
+  position: relative;
+  padding: 0.7rem 1.5rem 0.7rem 1.1rem;
+  color: var(--muted);
+  font-size: 0.83rem;
+  line-height: 1.45;
+}
+
+.house-standards li::before {
+  content: "";
+  position: absolute;
+  top: 1.05rem;
+  left: 0;
+  width: 0.34rem;
+  height: 0.34rem;
+  border: 1px solid rgba(168, 90, 56, 0.75);
+  transform: rotate(45deg);
+}
+
+.workshop-cta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.4rem clamp(1.75rem, 4vw, 2.75rem);
+  background: linear-gradient(90deg, rgba(168,90,56,0.075), transparent 58%);
+}
+
+.workshop-cta p {
+  margin: 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(1.25rem, 2.8vw, 1.65rem);
+}
+
+.workshop-cta .primary-action {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.55rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
 .imp-shell {
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 0.4rem;
   padding: 1.25rem;
   background: rgba(11, 10, 9, 0.7);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), inset 0 -1px 0 rgba(0,0,0,0.35);
+  scroll-margin-top: 2rem;
 }
 
 .imp-header {
@@ -571,6 +888,88 @@ body {
     padding: 1.5rem 1rem;
   }
 
+  .workshop-intro,
+  .forge-process {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .work-entry {
+    grid-template-columns: 1fr;
+  }
+
+  .work-rail {
+    flex-direction: row;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .work-number {
+    font-size: 1.7rem;
+  }
+
+  .work-type {
+    max-width: 15rem;
+    text-align: right;
+  }
+
+  .work-body {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .work-title {
+    flex-direction: column;
+  }
+
+  .work-stages {
+    grid-template-columns: 1fr;
+  }
+
+  .work-stage,
+  .work-stage:first-child,
+  .work-stage:last-child {
+    padding: 1rem 0;
+    border-left: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .work-stage:last-child {
+    border-bottom: 0;
+  }
+
+  .forge-process ol,
+  .house-standards ul {
+    grid-template-columns: 1fr;
+  }
+
+  .forge-process li,
+  .forge-process li:nth-last-child(-n + 2) {
+    min-height: 0;
+    padding: 0.85rem 0;
+    border-left: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .forge-process li:last-child {
+    border-bottom: 0;
+  }
+
+  .house-standards li {
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+
+  .house-standards li::before {
+    top: 0.9rem;
+  }
+
+  .workshop-cta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .imp-header,
   .report-head,
   .report-actions {
@@ -588,6 +987,41 @@ body {
     bottom: auto;
     justify-self: end;
     margin: -0.15rem 0.1rem 0;
+  }
+}
+
+@media (min-width: 741px) and (max-width: 960px) {
+  .workshop-intro,
+  .forge-process {
+    grid-template-columns: 1fr;
+    gap: 1.35rem;
+  }
+
+  .work-stages {
+    grid-template-columns: 1fr;
+  }
+
+  .work-stage,
+  .work-stage:first-child,
+  .work-stage:last-child {
+    display: grid;
+    grid-template-columns: 6rem minmax(0, 1fr);
+    gap: 1rem;
+    padding: 1rem 0;
+    border-left: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .work-stage:last-child {
+    border-bottom: 0;
+  }
+
+  .work-stage dt {
+    margin: 0;
+  }
+
+  .house-standards ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
