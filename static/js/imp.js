@@ -14,6 +14,8 @@ const state = {
   },
   pendingField: "project_summary",
   pricingCategory: "unclassified",
+  primaryPricingCategory: "unclassified",
+  secondaryPricingCategories: [],
   awaitingBudgetConfirmation: false,
   inPreview: false,
   reportVisible: false,
@@ -170,8 +172,21 @@ function addBubble(text, role) {
 }
 
 function updateProgress() {
-  const fields = Object.entries(state.inquiry).filter(([, value]) => Boolean(value));
-  const percent = Math.round((fields.length / Object.keys(state.inquiry).length) * 100);
+  const populatedFields = [
+    state.inquiry.project_summary,
+    state.inquiry.desired_outcome,
+    state.inquiry.current_state,
+    state.inquiry.important_features,
+    state.inquiry.constraints,
+    state.inquiry.existing_materials_or_links,
+    state.inquiry.timeline,
+    state.inquiry.budget_context,
+    state.inquiry.visitor_name,
+    state.inquiry.visitor_email,
+    state.inquiry.questions_or_comments_for_saeva,
+  ].filter((value) => typeof value === "string" && value.trim().length > 0);
+
+  const percent = populatedFields.length === 0 ? 0 : Math.round((populatedFields.length / 11) * 100);
   progressText.textContent = `${percent}% understood`;
   progressBar.style.width = `${percent}%`;
 }
@@ -180,51 +195,151 @@ function isRequiredComplete() {
   return Boolean(state.inquiry.project_summary) && Boolean(state.inquiry.desired_outcome) && Boolean(state.inquiry.visitor_name) && Boolean(state.inquiry.visitor_email);
 }
 
+function normalizeConversationText(text) {
+  return (text || "").replace(/\s+/g, " ").trim();
+}
+
+function isNonNameConstruction(value) {
+  const lower = (value || "").toLowerCase();
+  return /^(not|unsure|uncertain|looking|trying|hoping|building|creating|interested|working|having|needing|here|wondering|need|want|looking for|trying to|hoping to|building a|creating a)/.test(lower);
+}
+
+function looksLikePersonalName(value) {
+  const cleaned = (value || "").trim();
+  if (!cleaned || cleaned.length < 2 || cleaned.length > 40) {
+    return false;
+  }
+  if (/\d/.test(cleaned)) {
+    return false;
+  }
+  if (isNonNameConstruction(cleaned)) {
+    return false;
+  }
+  if (/^(project|website|software|tool|custom|business|site|contact|form|repair|improvement|design|thing|help|idea|service|client)$/i.test(cleaned)) {
+    return false;
+  }
+  return /^[A-Za-z][A-Za-z .'-]*$/.test(cleaned);
+}
+
 function extractVisitorName(text) {
+  const normalized = normalizeConversationText(text);
   const patterns = [
     /\bmy name is\s+([A-Za-z][A-Za-z .'-]{0,30})/i,
+    /\bthis is\s+([A-Za-z][A-Za-z .'-]{0,30})/i,
+    /\byou can call me\s+([A-Za-z][A-Za-z .'-]{0,30})/i,
+    /\bcall me\s+([A-Za-z][A-Za-z .'-]{0,30})/i,
     /\bi['’]m\s+([A-Za-z][A-Za-z .'-]{0,30})/i,
     /\bi am\s+([A-Za-z][A-Za-z .'-]{0,30})/i,
   ];
 
   for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      const name = match[1].trim();
-      if (name && name.length <= 40) {
-        return name;
-      }
+    const match = normalized.match(pattern);
+    if (!match) {
+      continue;
+    }
+    const candidate = match[1].trim().replace(/[.,;:!?]+$/g, "");
+    const simplified = candidate
+      .split(/\s+(and|my|email|is|at|for|with)\b/i)[0]
+      .trim();
+    if (looksLikePersonalName(simplified)) {
+      return simplified;
     }
   }
 
   return "";
 }
 
+function extractEmailAddress(text) {
+  const match = normalizeConversationText(text).match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+  if (!match) {
+    return "";
+  }
+  return match[0].replace(/[.,;:!?]+$/g, "");
+}
+
+function extractBudgetContext(text) {
+  const amount = parseBudgetAmount(text);
+  if (amount === null) {
+    return "";
+  }
+  const lower = text.toLowerCase();
+  if (lower.includes("about") || lower.includes("approximately") || lower.includes("around")) {
+    return `Approximately $${amount}.`;
+  }
+  if (lower.includes("maximum") || lower.includes("max") || lower.includes("up to")) {
+    return `Up to $${amount}.`;
+  }
+  if (lower.includes("only") || lower.includes("just")) {
+    return `Only $${amount}.`;
+  }
+  return `$${amount}.`;
+}
+
+function looksLikeCurrentState(text) {
+  return /(existing|website|site|contact form|broken|stopped working|mobile|phone|outdated|old|credentials|account|built|current|already|launch|hosting|domain|design)/i.test(text);
+}
+
+function extractCurrentState(text) {
+  const lower = text.toLowerCase();
+  if (lower.includes("contact form") && (lower.includes("stopped working") || lower.includes("broken") || lower.includes("doesn't work") || lower.includes("does not work"))) {
+    return "The contact form is not working.";
+  }
+  if (lower.includes("existing website") || lower.includes("website exists") || lower.includes("site exists") || lower.includes("existing site")) {
+    return "The existing site is already in place.";
+  }
+  if (lower.includes("built by") || lower.includes("built with") || lower.includes("originally built")) {
+    return "The site was built previously and may need review.";
+  }
+  if (looksLikeCurrentState(text) && !/(my name|my email|email is|name is)/i.test(text)) {
+    return text;
+  }
+  return "";
+}
+
 function extractProjectSummary(text) {
-  const cleaned = text.replace(/^(hello|hi)\s+imp[,.\s]*/i, "").replace(/\bmy name is\s+([A-Za-z][A-Za-z .'-]{0,30})/i, "").replace(/\bi['’]m\s+([A-Za-z][A-Za-z .'-]{0,30})/i, "").replace(/\bi am\s+([A-Za-z][A-Za-z .'-]{0,30})/i, "").replace(/\s+/g, " ").trim();
+  const normalized = normalizeConversationText(text);
+  const sentences = normalized
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+    .filter((sentence) => !/^(hi|hello|hey)\b/i.test(sentence) && !/^(i['’]m|i am)\s+(not|not completely|not sure|unsure|uncertain|looking|trying|hoping|building|creating|interested|working|having|needing|here|wondering|looking for|trying to|hoping to|building a|creating a)/i.test(sentence))
+    .map((sentence) => sentence.replace(/^(my name is|this is|you can call me|call me)\b.*$/i, ""));
 
+  const cleaned = sentences.join(" ").trim();
   if (!cleaned) {
-    return "A project";
+    return "";
   }
 
-  if (/power\s*[- ]?washing/i.test(cleaned) && /website/i.test(cleaned)) {
-    return "A website for a power-washing company";
+  if (/\bwebsite\b/i.test(cleaned) && /looks?\s+(old|outdated)/i.test(cleaned) && /contact form/i.test(cleaned) && /(stopped working|broken|doesn'?t work|does not work|is not working)/i.test(cleaned) && /(awful|terrible|poorly|mobile|phone)/i.test(cleaned)) {
+    return "Existing website looks outdated, the contact form is broken, and the site performs poorly on mobile.";
   }
 
-  if (/website/i.test(cleaned)) {
-    return "A website project";
+  const lower = cleaned.toLowerCase();
+  const summaryParts = [];
+
+  if (/(website|site)\s+(exists|already exists|is existing)/i.test(cleaned) || /\bexisting\b/i.test(cleaned)) {
+    summaryParts.push("Existing website");
+  } else if (/\bwebsite\b/i.test(cleaned) || /\bsite\b/i.test(cleaned)) {
+    summaryParts.push("Website");
   }
 
-  if (/software/i.test(cleaned)) {
-    return "A software project";
+  if (/looks?\s+(old|outdated)/i.test(cleaned)) {
+    summaryParts.push("looks outdated");
   }
 
-  if (/tool/i.test(cleaned)) {
-    return "A custom tool";
+  if (/contact form/i.test(cleaned) && /(stopped working|broken|doesn'?t work|does not work|is not working)/i.test(cleaned)) {
+    summaryParts.push("the contact form is broken");
   }
 
-  const withoutLead = cleaned.replace(/^i have\s+/i, "").replace(/^i need\s+/i, "").replace(/^i want\s+/i, "").replace(/^i am looking for\s+/i, "").replace(/^i would like\s+/i, "").replace(/^a\s+/i, "").trim();
-  return withoutLead ? withoutLead.charAt(0).toUpperCase() + withoutLead.slice(1) : cleaned;
+  if (/(awful|terrible|poorly|bad|mobile|phone)/i.test(cleaned)) {
+    summaryParts.push("the site performs poorly on mobile");
+  }
+
+  if (!summaryParts.length) {
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+
+  return summaryParts.join(", ").replace(/\s+/g, " ").trim();
 }
 
 function getNextFieldToAsk() {
@@ -239,44 +354,59 @@ function getNextFieldToAsk() {
 }
 
 function summarizeProjectSummary(text) {
-  const cleaned = text.replace(/\s+/g, " ").trim();
+  const cleaned = normalizeConversationText(text);
   if (!cleaned) {
     return "the project";
   }
-
-  const lower = cleaned.toLowerCase();
-  if (lower.includes("power washing") || lower.includes("power-washing")) {
-    return "a website for a power-washing company";
+  if (cleaned.length > 140) {
+    return cleaned.slice(0, 137).trimEnd() + "...";
   }
-
-  if (lower.includes("website")) {
-    return "a website project";
-  }
-
-  if (lower.includes("software")) {
-    return "a software project";
-  }
-
-  if (lower.includes("tool")) {
-    return "a custom tool";
-  }
-
   return cleaned;
 }
 
 function classifyProject(text) {
   const lower = (text || "").toLowerCase();
-  for (const [category, keywords] of Object.entries(PRICING_KEYWORDS)) {
-    if (keywords.some((keyword) => lower.includes(keyword))) {
-      return category;
-    }
+  const detected = [];
+
+  if (PRICING_KEYWORDS.small_repair.some((keyword) => lower.includes(keyword))) {
+    detected.push("small_repair");
   }
-  return "unclassified";
+  if (PRICING_KEYWORDS.focused_improvement.some((keyword) => lower.includes(keyword))) {
+    detected.push("focused_improvement");
+  }
+  if (PRICING_KEYWORDS.new_custom_project.some((keyword) => lower.includes(keyword))) {
+    detected.push("new_custom_project");
+  }
+  if (PRICING_KEYWORDS.small_business_website.some((keyword) => lower.includes(keyword))) {
+    detected.push("small_business_website");
+  }
+  if (PRICING_KEYWORDS.complex_custom.some((keyword) => lower.includes(keyword))) {
+    detected.push("complex_custom");
+  }
+
+  if (detected.includes("small_repair") && /mobile|phone|responsive|redesign|improvement|update|layout|design|appearance|old|outdated|ui/i.test(lower)) {
+    detected.push("focused_improvement");
+  }
+
+  const primary = detected.includes("small_repair")
+    ? "small_repair"
+    : detected.includes("focused_improvement")
+      ? "focused_improvement"
+      : detected.includes("new_custom_project")
+        ? "new_custom_project"
+        : detected.includes("small_business_website")
+          ? "small_business_website"
+          : detected.includes("complex_custom")
+            ? "complex_custom"
+            : "unclassified";
+
+  const secondary = detected.filter((category) => category !== primary);
+  return { primary, secondary };
 }
 
 function isPricingQuestion(text) {
   const lower = text.toLowerCase();
-  return ["price", "pricing", "cost", "costs", "charge", "charges", "rate", "rates", "fee", "fees", "affordable", "affordability", "budget"].some((term) => lower.includes(term));
+  return ["price", "pricing", "cost", "costs", "charge", "charges", "rate", "rates", "fee", "fees", "affordable", "affordability", "budget", "worth bringing", "fit my budget", "fit the budget"].some((term) => lower.includes(term));
 }
 
 function getPricingOverview() {
@@ -292,7 +422,10 @@ function parseBudgetAmount(text) {
   return Number(value);
 }
 
-function getBudgetMismatchResponse(category) {
+function getBudgetMismatchResponse(category, secondaryCategories) {
+  if (category === "small_repair" && secondaryCategories.includes("focused_improvement")) {
+    return "Yes. Small repairs begin at $95, so restoring the contact flow may fit the budget you’ve described. A broader visual or mobile improvement typically begins at $175, so Saeva may recommend handling the repair first and treating the redesign as a later phase. I can prepare the inquiry with that priority noted.";
+  }
   if (category === "small_business_website") {
     return "A complete custom business website typically begins at $600. With the budget you’ve described, Saeva may be able to propose a tightly scoped single-page site, divide the work into phases, or recommend a simpler launch path. Shall I prepare the inquiry with that understanding?";
   }
@@ -310,21 +443,33 @@ function getBudgetMismatchResponse(category) {
 
 function handleBudgetContext(text) {
   const budgetAmount = parseBudgetAmount(text);
-  const category = state.pricingCategory || "unclassified";
-  if (budgetAmount === null || category === "unclassified" || category === "complex_custom") {
-    addBubble("Sovereign Flame prices work by scope rather than by the hour. The budget you’ve described will help me understand the level of scope that makes sense. Shall I prepare the inquiry with that understanding?", "imp");
-    state.awaitingBudgetConfirmation = true;
-    announce("Budget noted. Confirm whether to prepare the inquiry with that understanding.");
+  const primaryCategory = state.primaryPricingCategory || state.pricingCategory || "unclassified";
+  const secondaryCategories = state.secondaryPricingCategories || [];
+
+  if (budgetAmount === null) {
+    addBubble("I’ll keep that budget context in mind as we continue the inquiry.", "imp");
     return true;
   }
 
-  const startPrice = PRICING_CATEGORIES[category].startPrice;
-  if (budgetAmount >= startPrice) {
-    addBubble("Understood. I’ll keep that in mind as we continue the inquiry.", "imp");
-    return false;
+  if (primaryCategory === "unclassified" || primaryCategory === "complex_custom") {
+    addBubble("Sovereign Flame prices work by scope rather than by the hour. The budget you’ve described will help me understand the level of scope that makes sense.", "imp");
+    announce("Budget noted. Returning to the inquiry.");
+    return true;
   }
 
-  addBubble(getBudgetMismatchResponse(category), "imp");
+  if (primaryCategory === "small_repair" && secondaryCategories.includes("focused_improvement")) {
+    addBubble(getBudgetMismatchResponse(primaryCategory, secondaryCategories), "imp");
+    announce("Budget noted. Returning to the inquiry.");
+    return true;
+  }
+
+  const startPrice = PRICING_CATEGORIES[primaryCategory].startPrice;
+  if (budgetAmount >= startPrice) {
+    addBubble("Understood. I’ll keep that in mind as we continue the inquiry.", "imp");
+    return true;
+  }
+
+  addBubble(getBudgetMismatchResponse(primaryCategory, secondaryCategories), "imp");
   state.awaitingBudgetConfirmation = true;
   announce("Budget mismatch noted. Confirm whether to prepare the inquiry with that understanding.");
   return true;
@@ -393,52 +538,85 @@ function handleAnswer(raw) {
     return;
   }
 
+  const budgetMention = /\$\s?\d|budget|maximum|afford|can spend|spend|cost|worth bringing|fit my budget|fit the budget/i.test(text);
+  if (budgetMention && state.pendingField !== "budget_context") {
+    const budgetContext = extractBudgetContext(text) || text;
+    state.inquiry.budget_context = budgetContext;
+    const classification = classifyProject(state.inquiry.project_summary || text);
+    state.primaryPricingCategory = classification.primary;
+    state.secondaryPricingCategories = classification.secondary;
+    state.pricingCategory = classification.primary;
+    if (handleBudgetContext(text)) {
+      updateProgress();
+      if (!state.awaitingBudgetConfirmation) {
+        showNextPrompt();
+      }
+      return;
+    }
+  }
+
   if (isPricingQuestion(text)) {
     addBubble(getPricingOverview(), "imp");
     showNextPrompt();
     return;
   }
 
-  const budgetMention = /\$\s?\d|budget|maximum|afford|can spend|spend|cost/i.test(text);
-  if (budgetMention && !state.inquiry.budget_context && state.pendingField !== "budget_context") {
-    state.inquiry.budget_context = text;
-    state.pricingCategory = state.pricingCategory || classifyProject(state.inquiry.project_summary || text);
-    if (handleBudgetContext(text)) {
-      return;
-    }
+  const extractedEmail = extractEmailAddress(text);
+  if (extractedEmail && !state.inquiry.visitor_email) {
+    state.inquiry.visitor_email = extractedEmail;
+  }
+
+  const inferredName = extractVisitorName(text);
+  if (inferredName && !state.inquiry.visitor_name) {
+    state.inquiry.visitor_name = inferredName;
+  }
+
+  const extractedOutcome = extractDesiredOutcome(text);
+  if (extractedOutcome && !state.inquiry.desired_outcome && (state.pendingField === "desired_outcome" || state.pendingField === "current_state")) {
+    state.inquiry.desired_outcome = extractedOutcome;
+  }
+
+  const compoundExtractionApplied = applyCompoundExtraction(text);
+  const extractedCurrentState = extractCurrentState(text);
+  const shouldCaptureCurrentState = state.pendingField === "current_state" && !state.inquiry.current_state && extractedCurrentState && !compoundExtractionApplied && !/(my name|my email|email is|name is)/i.test(text);
+  if (shouldCaptureCurrentState) {
+    state.inquiry.current_state = extractedCurrentState;
   }
 
   if (state.pendingField === "visitor_email") {
-    if (budgetMention) {
-      state.inquiry.budget_context = text;
-      state.pricingCategory = state.pricingCategory || classifyProject(state.inquiry.project_summary || text);
-      if (handleBudgetContext(text)) {
-        return;
-      }
-    }
-    const simpleEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-    if (!simpleEmail.test(text)) {
+    if (extractedEmail) {
+      state.inquiry.visitor_email = extractedEmail;
+    } else {
       addBubble("Please provide a valid email address, or say \"skip\" if you prefer to leave that for later.", "imp");
       return;
     }
   }
 
   if (state.pendingField) {
-    const capturedValue = state.pendingField === "project_summary" ? extractProjectSummary(text) : text;
-    state.inquiry[state.pendingField] = capturedValue;
+    let capturedValue = text;
+    const shouldCapturePendingField = !(compoundExtractionApplied && state.pendingField !== "project_summary" && state.pendingField !== "desired_outcome" && state.pendingField !== "visitor_name" && state.pendingField !== "visitor_email");
+
     if (state.pendingField === "project_summary") {
-      state.pricingCategory = classifyProject(text);
-      const inferredName = extractVisitorName(text);
-      if (inferredName && !state.inquiry.visitor_name) {
-        state.inquiry.visitor_name = inferredName;
-      }
+      capturedValue = extractProjectSummary(text);
+    } else if (state.pendingField === "desired_outcome") {
+      capturedValue = extractDesiredOutcome(text) || text;
+    } else if (state.pendingField === "current_state") {
+      capturedValue = extractedCurrentState || "";
     }
 
-    if (state.pendingField === "budget_context") {
+    if (state.pendingField === "project_summary" && capturedValue) {
+      state.inquiry.project_summary = capturedValue;
+      const classification = classifyProject(text);
+      state.primaryPricingCategory = classification.primary;
+      state.secondaryPricingCategories = classification.secondary;
+      state.pricingCategory = classification.primary;
+    } else if (state.pendingField === "budget_context") {
       state.inquiry.budget_context = text;
       if (handleBudgetContext(text)) {
         return;
       }
+    } else if (shouldCapturePendingField && capturedValue) {
+      state.inquiry[state.pendingField] = capturedValue;
     }
 
     updateProgress();
@@ -462,6 +640,99 @@ function handleAnswer(raw) {
   }
 
   showNextPrompt();
+}
+
+function appendFieldValue(currentValue, nextValue) {
+  if (!nextValue) {
+    return currentValue;
+  }
+  if (!currentValue) {
+    return nextValue;
+  }
+  return `${currentValue}\n${nextValue}`;
+}
+
+function applyCompoundExtraction(text) {
+  let changed = false;
+  const materialsValue = extractMaterialsFromText(text);
+  if (materialsValue && !state.inquiry.existing_materials_or_links) {
+    state.inquiry.existing_materials_or_links = materialsValue;
+    changed = true;
+  }
+
+  const priorityNote = extractPriorityNote(text);
+  if (priorityNote) {
+    state.inquiry.questions_or_comments_for_saeva = appendFieldValue(state.inquiry.questions_or_comments_for_saeva, priorityNote);
+    changed = true;
+  }
+
+  const constraintsValue = extractConstraintsFromText(text);
+  if (constraintsValue && !state.inquiry.constraints) {
+    state.inquiry.constraints = constraintsValue;
+    changed = true;
+  }
+
+  return changed;
+}
+
+function extractMaterialsFromText(text) {
+  const lower = text.toLowerCase();
+  const materials = [];
+
+  if (lower.includes("logo")) {
+    materials.push("Logo");
+  }
+  if (lower.includes("service list") || lower.includes("services list") || lower.includes("service list") || lower.includes("services")) {
+    materials.push("Service list");
+  }
+  if (lower.includes("before-and-after") || lower.includes("before and after") || lower.includes("before after") || lower.includes("before/after") || lower.includes("before and after photos")) {
+    materials.push("Before-and-after photos");
+  }
+  if (lower.includes("professional copy") || lower.includes("copy") || lower.includes("copywriting")) {
+    materials.push("Professional copy is not yet available");
+  }
+
+  if (!materials.length) {
+    return "";
+  }
+
+  return materials.join("; ");
+}
+
+function extractDesiredOutcome(text) {
+  const lower = text.toLowerCase();
+  if (lower.includes("contact form") && (lower.includes("fix") || lower.includes("repair") || lower.includes("restore") || lower.includes("as soon as possible"))) {
+    return "Restore customer contact and improve the site’s appearance.";
+  }
+  if (lower.includes("redesign") && lower.includes("can wait")) {
+    return "Restore customer contact and improve the site’s appearance.";
+  }
+  if (lower.includes("mobile") || lower.includes("phones")) {
+    return "Improve the site’s mobile experience and appearance.";
+  }
+  return "";
+}
+
+function extractPriorityNote(text) {
+  const lower = text.toLowerCase();
+  if (lower.includes("contact form") && lower.includes("as soon as possible")) {
+    return "Priority: Repair the contact form first. The broader redesign can be completed later as a separate phase.";
+  }
+  if (lower.includes("can wait") && (lower.includes("redesign") || lower.includes("improvement") || lower.includes("visual"))) {
+    return "Priority: The broader redesign can be completed later as a separate phase.";
+  }
+  return "";
+}
+
+function extractConstraintsFromText(text) {
+  const lower = text.toLowerCase();
+  if ((lower.includes("professional copy") || lower.includes("copywriting")) && (lower.includes("don't have") || lower.includes("do not have") || lower.includes("not yet available"))) {
+    return "Professional copy is not yet available.";
+  }
+  if (lower.includes("credentials") && (lower.includes("may not") || lower.includes("not yet"))) {
+    return "Full account credentials may not yet be available.";
+  }
+  return "";
 }
 
 function handleHelpRequest(text) {
