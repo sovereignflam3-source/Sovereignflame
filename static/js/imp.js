@@ -13,6 +13,8 @@ const state = {
     questions_or_comments_for_saeva: "",
   },
   pendingField: "project_summary",
+  pricingCategory: "unclassified",
+  awaitingBudgetConfirmation: false,
   inPreview: false,
   reportVisible: false,
   conversationReady: false,
@@ -55,6 +57,84 @@ const OPTIONAL_FIELDS = new Set([
   "budget_context",
   "questions_or_comments_for_saeva",
 ]);
+
+const PRICING_CATEGORIES = {
+  small_repair: { label: "Small repair or diagnosis", startPrice: 95 },
+  focused_improvement: { label: "Focused improvement", startPrice: 175 },
+  new_custom_project: { label: "New custom project", startPrice: 300 },
+  small_business_website: { label: "Complete small-business website", startPrice: 600 },
+  complex_custom: { label: "Complex software, integrations, and unusually involved projects", startPrice: null },
+  unclassified: { label: "Unclassified", startPrice: null },
+};
+
+const PRICING_KEYWORDS = {
+  small_repair: [
+    "broken link",
+    "broken image",
+    "form stopped working",
+    "mobile issue",
+    "fix one thing",
+    "text change",
+    "color change",
+    "diagnose",
+    "bug fix",
+    "one broken image",
+    "contact form",
+    "stopped working",
+    "one broken image fixed",
+  ],
+  focused_improvement: [
+    "add gallery",
+    "add contact form",
+    "improve mobile layout",
+    "redesign a section",
+    "clean up existing site",
+    "add a feature",
+    "update several pages",
+    "improve responsiveness",
+    "simple automation",
+  ],
+  new_custom_project: [
+    "new landing page",
+    "one-page website",
+    "small program",
+    "automation",
+    "prototype",
+    "proof of concept",
+    "custom tool",
+    "small custom automation",
+    "small custom",
+  ],
+  small_business_website: [
+    "new business website",
+    "company website",
+    "service website",
+    "showcase services",
+    "company background",
+    "client contact",
+    "consultation form",
+    "multiple business pages",
+    "business has no existing website",
+    "company history",
+    "pressure-washing business",
+    "business website",
+    "services",
+    "consultation form",
+    "service information",
+    "company history",
+  ],
+  complex_custom: [
+    "ai integration",
+    "custom platform",
+    "saas",
+    "multi-user system",
+    "payment processing",
+    "scheduling system",
+    "database-heavy application",
+    "multiple integrations",
+    "advanced automation",
+  ],
+};
 
 const FIELD_SEQUENCE = [
   "project_summary",
@@ -184,6 +264,72 @@ function summarizeProjectSummary(text) {
   return cleaned;
 }
 
+function classifyProject(text) {
+  const lower = (text || "").toLowerCase();
+  for (const [category, keywords] of Object.entries(PRICING_KEYWORDS)) {
+    if (keywords.some((keyword) => lower.includes(keyword))) {
+      return category;
+    }
+  }
+  return "unclassified";
+}
+
+function isPricingQuestion(text) {
+  const lower = text.toLowerCase();
+  return ["price", "pricing", "cost", "costs", "charge", "charges", "rate", "rates", "fee", "fees", "affordable", "affordability", "budget"].some((term) => lower.includes(term));
+}
+
+function getPricingOverview() {
+  return "Sovereign Flame prices work by scope rather than by the hour. Small repairs begin at $95, focused improvements begin at $175, and new custom projects begin at $300. Complete small-business websites typically begin at $600. Complex software and integrations receive a custom fixed quote once the scope is understood.";
+}
+
+function parseBudgetAmount(text) {
+  const matches = text.match(/\$\s?(\d+(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)/g) || [];
+  if (!matches.length) {
+    return null;
+  }
+  const value = matches[0].replace(/[$,]/g, "");
+  return Number(value);
+}
+
+function getBudgetMismatchResponse(category) {
+  if (category === "small_business_website") {
+    return "A complete custom business website typically begins at $600. With the budget you’ve described, Saeva may be able to propose a tightly scoped single-page site, divide the work into phases, or recommend a simpler launch path. Shall I prepare the inquiry with that understanding?";
+  }
+  if (category === "new_custom_project") {
+    return "New custom projects begin at $300. The scope may need to be reduced, divided into phases, or approached differently to fit the budget you’ve described. Shall I prepare the inquiry with that understanding?";
+  }
+  if (category === "focused_improvement") {
+    return "Focused improvements begin at $175. Saeva may be able to narrow the work to the most important change or suggest another practical direction. Shall I prepare the inquiry with that understanding?";
+  }
+  if (category === "small_repair") {
+    return "Small repairs and diagnostic work begin at $95. Saeva may still be able to clarify the issue or recommend the most efficient next step. Shall I prepare the inquiry with that understanding?";
+  }
+  return "Sovereign Flame prices work by scope rather than by the hour. The budget you’ve described may call for a narrower scope, phased work, or a simpler launch path. Shall I prepare the inquiry with that understanding?";
+}
+
+function handleBudgetContext(text) {
+  const budgetAmount = parseBudgetAmount(text);
+  const category = state.pricingCategory || "unclassified";
+  if (budgetAmount === null || category === "unclassified" || category === "complex_custom") {
+    addBubble("Sovereign Flame prices work by scope rather than by the hour. The budget you’ve described will help me understand the level of scope that makes sense. Shall I prepare the inquiry with that understanding?", "imp");
+    state.awaitingBudgetConfirmation = true;
+    announce("Budget noted. Confirm whether to prepare the inquiry with that understanding.");
+    return true;
+  }
+
+  const startPrice = PRICING_CATEGORIES[category].startPrice;
+  if (budgetAmount >= startPrice) {
+    addBubble("Understood. I’ll keep that in mind as we continue the inquiry.", "imp");
+    return false;
+  }
+
+  addBubble(getBudgetMismatchResponse(category), "imp");
+  state.awaitingBudgetConfirmation = true;
+  announce("Budget mismatch noted. Confirm whether to prepare the inquiry with that understanding.");
+  return true;
+}
+
 function showNextPrompt() {
   if (state.inPreview) {
     return;
@@ -224,6 +370,21 @@ function handleAnswer(raw) {
     return;
   }
 
+  if (state.awaitingBudgetConfirmation) {
+    const confirm = /yes|yep|sure|proceed|prepare|continue|okay|ok/i.test(text);
+    if (confirm) {
+      state.awaitingBudgetConfirmation = false;
+      state.pendingField = getNextFieldToAsk();
+      showNextPrompt();
+      return;
+    }
+    state.awaitingBudgetConfirmation = false;
+    addBubble("Understood. I’ll leave the inquiry open for now.", "imp");
+    state.pendingField = getNextFieldToAsk();
+    showNextPrompt();
+    return;
+  }
+
   if (state.pendingField && OPTIONAL_FIELDS.has(state.pendingField) && /^skip$/i.test(text)) {
     state.inquiry[state.pendingField] = "";
     state.pendingField = getNextFieldToAsk();
@@ -232,7 +393,29 @@ function handleAnswer(raw) {
     return;
   }
 
+  if (isPricingQuestion(text)) {
+    addBubble(getPricingOverview(), "imp");
+    showNextPrompt();
+    return;
+  }
+
+  const budgetMention = /\$\s?\d|budget|maximum|afford|can spend|spend|cost/i.test(text);
+  if (budgetMention && !state.inquiry.budget_context && state.pendingField !== "budget_context") {
+    state.inquiry.budget_context = text;
+    state.pricingCategory = state.pricingCategory || classifyProject(state.inquiry.project_summary || text);
+    if (handleBudgetContext(text)) {
+      return;
+    }
+  }
+
   if (state.pendingField === "visitor_email") {
+    if (budgetMention) {
+      state.inquiry.budget_context = text;
+      state.pricingCategory = state.pricingCategory || classifyProject(state.inquiry.project_summary || text);
+      if (handleBudgetContext(text)) {
+        return;
+      }
+    }
     const simpleEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
     if (!simpleEmail.test(text)) {
       addBubble("Please provide a valid email address, or say \"skip\" if you prefer to leave that for later.", "imp");
@@ -244,11 +427,20 @@ function handleAnswer(raw) {
     const capturedValue = state.pendingField === "project_summary" ? extractProjectSummary(text) : text;
     state.inquiry[state.pendingField] = capturedValue;
     if (state.pendingField === "project_summary") {
+      state.pricingCategory = classifyProject(text);
       const inferredName = extractVisitorName(text);
       if (inferredName && !state.inquiry.visitor_name) {
         state.inquiry.visitor_name = inferredName;
       }
     }
+
+    if (state.pendingField === "budget_context") {
+      state.inquiry.budget_context = text;
+      if (handleBudgetContext(text)) {
+        return;
+      }
+    }
+
     updateProgress();
     state.pendingField = getNextFieldToAsk();
   }
