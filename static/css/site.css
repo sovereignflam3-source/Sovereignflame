@@ -108,7 +108,7 @@ body {
 
 .hero {
   display: grid;
-  gap: 1.25rem;
+  gap: 1.15rem;
   max-width: 44rem;
 }
 

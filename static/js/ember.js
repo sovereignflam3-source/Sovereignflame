@@ -8,28 +8,19 @@ const SOUND_COOLDOWN_MS = 520;
 const ANIMATION_CLASSES = Object.values(SOUND_CONFIG).map(({ animationClass }) => animationClass);
 
 export function selectEmberSound(random = Math.random) {
-  const feralSelected = random() < 1 / 40;
-  const mutatioSelected = random() < 1 / 12;
-
-  if (feralSelected) {
+  if (random() < 1 / 40) {
     return "feral";
   }
-  if (mutatioSelected) {
+  if (random() < 1 / 12) {
     return "mutatio";
   }
   return "flame";
 }
 
-function createPlayers(emberFamiliar) {
-  return Object.fromEntries(
-    Object.entries(SOUND_CONFIG).map(([name, config]) => {
-      const audio = new Audio();
-      audio.preload = "metadata";
-      audio.volume = config.volume;
-      audio.src = emberFamiliar.dataset[config.datasetKey];
-      return [name, audio];
-    }),
-  );
+function createPlayer() {
+  const audio = new Audio();
+  audio.preload = "auto";
+  return audio;
 }
 
 function stopAudio(audio) {
@@ -41,6 +32,13 @@ function stopAudio(audio) {
   try {
     audio.currentTime = 0;
   } catch {}
+}
+
+function reportPlaybackFailure(error) {
+  const isLocalDevelopment = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  if (isLocalDevelopment) {
+    console.warn("Ember audio playback failed.", error);
+  }
 }
 
 function animateEmber(emberFamiliar, animationClass, previousTimer) {
@@ -60,8 +58,7 @@ function initializeEmberFamiliar() {
     return;
   }
 
-  const players = createPlayers(emberFamiliar);
-  let currentAudio = null;
+  let player = null;
   let lastSoundAt = Number.NEGATIVE_INFINITY;
   let animationTimer = null;
 
@@ -74,15 +71,19 @@ function initializeEmberFamiliar() {
 
     lastSoundAt = now;
     const soundName = selectEmberSound();
-    const sound = players[soundName];
+    const config = SOUND_CONFIG[soundName];
+    const source = emberFamiliar.dataset[config.datasetKey];
 
-    stopAudio(currentAudio);
-    currentAudio = sound;
-    animationTimer = animateEmber(emberFamiliar, SOUND_CONFIG[soundName].animationClass, animationTimer);
+    player ||= createPlayer();
+    stopAudio(player);
+    player.src = source;
+    player.muted = false;
+    player.volume = config.volume;
+    animationTimer = animateEmber(emberFamiliar, config.animationClass, animationTimer);
 
-    const playback = sound.play();
+    const playback = player.play();
     if (playback && typeof playback.catch === "function") {
-      playback.catch(() => {});
+      playback.catch(reportPlaybackFailure);
     }
   });
 }
