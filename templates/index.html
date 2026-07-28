@@ -46,6 +46,18 @@
       </div>
     </main>
 
+    <button
+      class="ember-familiar"
+      id="ember-familiar"
+      type="button"
+      aria-label="Play with the Sovereign Flame"
+      data-flame-src="{{ url_for('static', filename='assets/audio/flame.mp3') }}"
+      data-mutatio-src="{{ url_for('static', filename='assets/audio/mutatio.mp3') }}"
+      data-feral-src="{{ url_for('static', filename='assets/audio/feral.wav') }}"
+    >
+      <span class="ember-familiar__flame" aria-hidden="true">🔥</span>
+    </button>
+
     <template id="report-template">
       <section class="report-panel" aria-labelledby="report-heading">
         <div class="report-head">
@@ -74,5 +86,6 @@
     </template>
 
     <script src="{{ url_for('static', filename='js/imp.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/ember.js') }}"></script>
   </body>
 </html>

@@ -16,7 +16,9 @@ const state = {
   pricingCategory: "unclassified",
   primaryPricingCategory: "unclassified",
   secondaryPricingCategories: [],
+  skippedFields: new Set(),
   awaitingBudgetConfirmation: false,
+  awaitingPreparationConfirmation: false,
   inPreview: false,
   reportVisible: false,
   conversationReady: false,
@@ -346,7 +348,7 @@ function getNextFieldToAsk() {
   const startIndex = state.pendingField ? FIELD_SEQUENCE.indexOf(state.pendingField) : 0;
   for (let index = Math.max(0, startIndex); index < FIELD_SEQUENCE.length; index += 1) {
     const field = FIELD_SEQUENCE[index];
-    if (!state.inquiry[field]) {
+    if (!state.inquiry[field] && !state.skippedFields.has(field)) {
       return field;
     }
   }
@@ -482,26 +484,16 @@ function showNextPrompt() {
 
   const nextField = getNextFieldToAsk();
   if (!nextField) {
-    if (isRequiredComplete() && !state.reportVisible) {
+    if (isRequiredComplete() && !state.reportVisible && !state.awaitingPreparationConfirmation) {
       addBubble("I believe I have the shape of it. Shall I prepare this for Saeva?", "imp");
       state.pendingField = null;
-      state.reportVisible = true;
-      loadPreview();
-      announce("Report preview ready. Review and approve the inquiry.");
+      state.awaitingPreparationConfirmation = true;
+      announce("Confirm whether the inquiry should be prepared for Saeva.");
     }
     return;
   }
 
   state.pendingField = nextField;
-
-  if (isRequiredComplete() && !state.reportVisible) {
-    addBubble("I believe I have the shape of it. Shall I prepare this for Saeva?", "imp");
-    state.pendingField = null;
-    state.reportVisible = true;
-    loadPreview();
-    announce("Report preview ready. Review and approve the inquiry.");
-    return;
-  }
 
   const prompt = PROMPT_TEXT[nextField];
   addBubble(prompt, "imp");
@@ -509,10 +501,33 @@ function showNextPrompt() {
 }
 
 function handleAnswer(raw) {
-  const text = raw.trim();
+  let text = raw.trim();
   if (!text) {
     addBubble("Please share a few words, or say \"skip\" if this is optional.", "imp");
     return;
+  }
+
+  const informationalInterruption = handleHelpRequest(text);
+  text = stripInformationalInterruption(text);
+  if (!text) {
+    if (informationalInterruption) {
+      showNextPrompt();
+    }
+    return;
+  }
+
+  if (state.awaitingPreparationConfirmation) {
+    const confirm = /yes|yep|sure|proceed|prepare|continue|okay|ok/i.test(text);
+    if (confirm) {
+      state.awaitingPreparationConfirmation = false;
+      state.reportVisible = true;
+      loadPreview();
+      announce("Report preview ready. Review and approve the inquiry.");
+      return;
+    }
+
+    state.awaitingPreparationConfirmation = false;
+    state.pendingField = "questions_or_comments_for_saeva";
   }
 
   if (state.awaitingBudgetConfirmation) {
@@ -532,16 +547,18 @@ function handleAnswer(raw) {
 
   if (state.pendingField && OPTIONAL_FIELDS.has(state.pendingField) && /^skip$/i.test(text)) {
     state.inquiry[state.pendingField] = "";
+    state.skippedFields.add(state.pendingField);
     state.pendingField = getNextFieldToAsk();
     updateProgress();
     showNextPrompt();
     return;
   }
 
-  const budgetMention = /\$\s?\d|budget|maximum|afford|can spend|spend|cost|worth bringing|fit my budget|fit the budget/i.test(text);
-  if (budgetMention && state.pendingField !== "budget_context") {
-    const budgetContext = extractBudgetContext(text) || text;
+  const budgetMention = parseBudgetAmount(text) !== null && /\$\s?\d|budget|maximum|afford|can spend|spend|worth bringing|fit my budget|fit the budget/i.test(text);
+  if (budgetMention) {
+    const budgetContext = extractBudgetContext(text);
     state.inquiry.budget_context = budgetContext;
+    state.skippedFields.delete("budget_context");
     const classification = classifyProject(state.inquiry.project_summary || text);
     state.primaryPricingCategory = classification.primary;
     state.secondaryPricingCategories = classification.secondary;
@@ -549,6 +566,7 @@ function handleAnswer(raw) {
     if (handleBudgetContext(text)) {
       updateProgress();
       if (!state.awaitingBudgetConfirmation) {
+        state.pendingField = getNextFieldToAsk();
         showNextPrompt();
       }
       return;
@@ -570,6 +588,7 @@ function handleAnswer(raw) {
   if (inferredName && !state.inquiry.visitor_name) {
     state.inquiry.visitor_name = inferredName;
   }
+  const containsIdentity = Boolean(extractedEmail || inferredName);
 
   const extractedOutcome = extractDesiredOutcome(text);
   if (extractedOutcome && !state.inquiry.desired_outcome && (state.pendingField === "desired_outcome" || state.pendingField === "current_state")) {
@@ -578,9 +597,14 @@ function handleAnswer(raw) {
 
   const compoundExtractionApplied = applyCompoundExtraction(text);
   const extractedCurrentState = extractCurrentState(text);
-  const shouldCaptureCurrentState = state.pendingField === "current_state" && !state.inquiry.current_state && extractedCurrentState && !compoundExtractionApplied && !/(my name|my email|email is|name is)/i.test(text);
+  const shouldCaptureCurrentState = state.pendingField === "current_state" && !state.inquiry.current_state && extractedCurrentState && !containsIdentity;
   if (shouldCaptureCurrentState) {
     state.inquiry.current_state = extractedCurrentState;
+  }
+
+  if (state.pendingField === "visitor_name" && !inferredName) {
+    addBubble("Please provide the name you would like attached to the inquiry.", "imp");
+    return;
   }
 
   if (state.pendingField === "visitor_email") {
@@ -594,7 +618,9 @@ function handleAnswer(raw) {
 
   if (state.pendingField) {
     let capturedValue = text;
-    const shouldCapturePendingField = !(compoundExtractionApplied && state.pendingField !== "project_summary" && state.pendingField !== "desired_outcome" && state.pendingField !== "visitor_name" && state.pendingField !== "visitor_email");
+    const identityTargetsPendingField = state.pendingField === "visitor_name" || state.pendingField === "visitor_email";
+    const shouldCapturePendingField = (!compoundExtractionApplied || state.pendingField === "project_summary" || state.pendingField === "desired_outcome" || shouldCaptureCurrentState || identityTargetsPendingField)
+      && (!containsIdentity || identityTargetsPendingField);
 
     if (state.pendingField === "project_summary") {
       capturedValue = extractProjectSummary(text);
@@ -610,32 +636,28 @@ function handleAnswer(raw) {
       state.primaryPricingCategory = classification.primary;
       state.secondaryPricingCategories = classification.secondary;
       state.pricingCategory = classification.primary;
-    } else if (state.pendingField === "budget_context") {
-      state.inquiry.budget_context = text;
-      if (handleBudgetContext(text)) {
-        return;
-      }
+    } else if (state.pendingField === "visitor_name" && inferredName) {
+      state.inquiry.visitor_name = inferredName;
+    } else if (state.pendingField === "visitor_email" && extractedEmail) {
+      state.inquiry.visitor_email = extractedEmail;
+    } else if (state.pendingField === "questions_or_comments_for_saeva" && shouldCapturePendingField && capturedValue) {
+      state.inquiry.questions_or_comments_for_saeva = appendFieldValue(state.inquiry.questions_or_comments_for_saeva, capturedValue);
     } else if (shouldCapturePendingField && capturedValue) {
       state.inquiry[state.pendingField] = capturedValue;
     }
 
+    if (state.inquiry[state.pendingField]) {
+      state.skippedFields.delete(state.pendingField);
+    }
     updateProgress();
     state.pendingField = getNextFieldToAsk();
   }
 
   if (state.pendingField === "desired_outcome" && state.inquiry.project_summary) {
-    const acknowledgement = `${summarizeProjectSummary(state.inquiry.project_summary)}. Very good. What should it accomplish for the business?`;
+    const summary = summarizeProjectSummary(state.inquiry.project_summary).replace(/[.!?]+$/g, "");
+    const acknowledgement = `${summary}. Very good. What should it accomplish for the business?`;
     addBubble(acknowledgement, "imp");
     announce("What should it accomplish for the business?");
-    return;
-  }
-
-  if (isRequiredComplete()) {
-    addBubble("I believe I have the shape of it. Shall I prepare this for Saeva?", "imp");
-    state.pendingField = null;
-    state.reportVisible = true;
-    loadPreview();
-    announce("Report preview ready. Review and approve the inquiry.");
     return;
   }
 
@@ -667,8 +689,8 @@ function applyCompoundExtraction(text) {
   }
 
   const constraintsValue = extractConstraintsFromText(text);
-  if (constraintsValue && !state.inquiry.constraints) {
-    state.inquiry.constraints = constraintsValue;
+  if (constraintsValue && !state.inquiry.constraints.includes(constraintsValue)) {
+    state.inquiry.constraints = appendFieldValue(state.inquiry.constraints, constraintsValue);
     changed = true;
   }
 
@@ -721,18 +743,33 @@ function extractPriorityNote(text) {
   if (lower.includes("can wait") && (lower.includes("redesign") || lower.includes("improvement") || lower.includes("visual"))) {
     return "Priority: The broader redesign can be completed later as a separate phase.";
   }
+  if (lower.includes("phase") && (lower.includes("open to") || lower.includes("doing this") || lower.includes("do this") || lower.includes("work in"))) {
+    return "Phasing: The visitor is open to completing the work in phases.";
+  }
   return "";
 }
 
 function extractConstraintsFromText(text) {
   const lower = text.toLowerCase();
-  if ((lower.includes("professional copy") || lower.includes("copywriting")) && (lower.includes("don't have") || lower.includes("do not have") || lower.includes("not yet available"))) {
+  const describesMissingMaterial = /don['’]t have|do not have|not yet available|missing/.test(lower);
+  if ((lower.includes("professional copy") || lower.includes("copywriting")) && describesMissingMaterial) {
     return "Professional copy is not yet available.";
   }
   if (lower.includes("credentials") && (lower.includes("may not") || lower.includes("not yet"))) {
     return "Full account credentials may not yet be available.";
   }
+  if (lower.includes("password") && describesMissingMaterial) {
+    return "Full account credentials may not yet be available.";
+  }
   return "";
+}
+
+function stripInformationalInterruption(text) {
+  return normalizeConversationText(text)
+    .split(/(?<=[.!?])\s+/)
+    .filter((sentence) => !/(what (exactly )?does sovereign flame do|what is sovereign flame|who is saeva(?: venia)?)/i.test(sentence))
+    .join(" ")
+    .trim();
 }
 
 function handleHelpRequest(text) {
@@ -744,6 +781,11 @@ function handleHelpRequest(text) {
 
   if (lower.includes("who is saeva") || lower.includes("who is saeva venia")) {
     addBubble("Saeva Venia is the private founder and programmer behind Sovereign Flame.", "imp");
+    return true;
+  }
+
+  if (lower.includes("fancy animation") || lower.includes("lots of animation")) {
+    addBubble("Motion can support clarity, but animation should serve the visitor rather than distract from the contact problem. Saeva can recommend a restrained approach after the repair is understood.", "imp");
     return true;
   }
 
@@ -815,27 +857,21 @@ chatForm.addEventListener("submit", (event) => {
   addBubble(message, "user");
   input.value = "";
 
-  if (handleHelpRequest(message)) {
-    showNextPrompt();
-    return;
-  }
-
-  if (state.reportVisible && !state.inPreview) {
-    const button = transcript.querySelector("[data-action='return']");
-    if (button) {
-      button.click();
-    }
-    return;
-  }
-
   handleAnswer(message);
 });
 
 transcript.addEventListener("click", (event) => {
   if (event.target.matches("[data-action='return']")) {
     state.inPreview = false;
-    state.pendingField = state.pendingField || "questions_or_comments_for_saeva";
-    showNextPrompt();
+    state.reportVisible = false;
+    state.awaitingPreparationConfirmation = false;
+    const reportPanel = transcript.querySelector(".report-panel");
+    if (reportPanel) {
+      reportPanel.remove();
+    }
+    state.pendingField = "questions_or_comments_for_saeva";
+    addBubble("What else would you like Saeva to know?", "imp");
+    announce("Returned to the inquiry conversation.");
   }
 
   if (event.target.matches("[data-action='submit']")) {
