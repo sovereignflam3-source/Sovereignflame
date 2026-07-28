@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sovereign Flame</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}" />
+  </head>
+  <body>
+    <main class="stage">
+      <div class="visual-grid">
+        <div class="logo-frame">
+          <img src="{{ url_for('static', filename='assets/sovereign-flame-logo.jpg') }}" alt="Sovereign Flame logo" class="logo-mark" />
+        </div>
+
+        <section class="hero">
+          <div class="eyebrow">Sovereign Flame</div>
+          <h1 class="title">Sovereign Flame</h1>
+          <p class="support">We build elegant websites, small software, and practical custom tools.</p>
+          <p class="support">Bring us the unusual, unfinished, or difficult. We’ll tell you what can be built, what should be learned, and when another specialist is the wiser choice.</p>
+        </section>
+
+        <section class="imp-shell" aria-labelledby="imp-heading">
+          <div class="imp-header">
+            <div>
+              <p class="imp-kicker">Interactive Model Processor</p>
+              <h2 id="imp-heading">What are we building for you?</h2>
+            </div>
+            <div class="progress-card" aria-label="Inquiry progress">
+              <span id="progress-text">0% understood</span>
+              <div class="progress-track" aria-hidden="true">
+                <div id="progress-bar" class="progress-bar"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="transcript" class="transcript" role="log" aria-live="polite" aria-label="IMP conversation"></div>
+
+          <form id="chat-form" class="chat-form">
+            <label for="message-input" class="visually-hidden">Message to IMP</label>
+            <input id="message-input" name="message" type="text" autocomplete="off" placeholder="Reply to IMP" />
+            <button type="submit">Send</button>
+          </form>
+          <p class="sr-only" id="status-region" aria-live="polite"></p>
+        </section>
+      </div>
+    </main>
+
+    <template id="report-template">
+      <section class="report-panel" aria-labelledby="report-heading">
+        <div class="report-head">
+          <div>
+            <p class="imp-kicker">Inquiry preview</p>
+            <h3 id="report-heading">Prepared for Saeva</h3>
+          </div>
+          <button type="button" class="ghost-button" data-action="return">Return to conversation</button>
+        </div>
+
+        <div class="report-grid"></div>
+
+        <div class="report-footer">
+          <p class="expectation">Saeva reviews each inquiry personally and reaches out when a project appears to be a good fit.</p>
+          <label class="consent-row">
+            <input type="checkbox" id="consent-checkbox" />
+            <span>I authorize this inquiry to be sent to Saeva.</span>
+          </label>
+          <p class="privacy-note">The information provided here is used only to evaluate and respond to your inquiry.</p>
+          <div class="report-actions">
+            <button type="button" class="ghost-button" data-action="return">Return to conversation</button>
+            <button type="button" class="primary-action" data-action="submit">Approve submission</button>
+          </div>
+        </div>
+      </section>
+    </template>
+
+    <script src="{{ url_for('static', filename='js/imp.js') }}"></script>
+  </body>
+</html>
