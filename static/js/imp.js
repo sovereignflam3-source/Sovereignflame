@@ -100,25 +100,108 @@ function isRequiredComplete() {
   return Boolean(state.inquiry.project_summary) && Boolean(state.inquiry.desired_outcome) && Boolean(state.inquiry.visitor_name) && Boolean(state.inquiry.visitor_email);
 }
 
+function extractVisitorName(text) {
+  const patterns = [
+    /\bmy name is\s+([A-Za-z][A-Za-z .'-]{0,30})/i,
+    /\bi['’]m\s+([A-Za-z][A-Za-z .'-]{0,30})/i,
+    /\bi am\s+([A-Za-z][A-Za-z .'-]{0,30})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const name = match[1].trim();
+      if (name && name.length <= 40) {
+        return name;
+      }
+    }
+  }
+
+  return "";
+}
+
+function extractProjectSummary(text) {
+  const cleaned = text.replace(/^(hello|hi)\s+imp[,.\s]*/i, "").replace(/\bmy name is\s+([A-Za-z][A-Za-z .'-]{0,30})/i, "").replace(/\bi['’]m\s+([A-Za-z][A-Za-z .'-]{0,30})/i, "").replace(/\bi am\s+([A-Za-z][A-Za-z .'-]{0,30})/i, "").replace(/\s+/g, " ").trim();
+
+  if (!cleaned) {
+    return "A project";
+  }
+
+  if (/power\s*[- ]?washing/i.test(cleaned) && /website/i.test(cleaned)) {
+    return "A website for a power-washing company";
+  }
+
+  if (/website/i.test(cleaned)) {
+    return "A website project";
+  }
+
+  if (/software/i.test(cleaned)) {
+    return "A software project";
+  }
+
+  if (/tool/i.test(cleaned)) {
+    return "A custom tool";
+  }
+
+  const withoutLead = cleaned.replace(/^i have\s+/i, "").replace(/^i need\s+/i, "").replace(/^i want\s+/i, "").replace(/^i am looking for\s+/i, "").replace(/^i would like\s+/i, "").replace(/^a\s+/i, "").trim();
+  return withoutLead ? withoutLead.charAt(0).toUpperCase() + withoutLead.slice(1) : cleaned;
+}
+
+function getNextFieldToAsk() {
+  const startIndex = state.pendingField ? FIELD_SEQUENCE.indexOf(state.pendingField) : 0;
+  for (let index = Math.max(0, startIndex); index < FIELD_SEQUENCE.length; index += 1) {
+    const field = FIELD_SEQUENCE[index];
+    if (!state.inquiry[field]) {
+      return field;
+    }
+  }
+  return null;
+}
+
+function summarizeProjectSummary(text) {
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  if (!cleaned) {
+    return "the project";
+  }
+
+  const lower = cleaned.toLowerCase();
+  if (lower.includes("power washing") || lower.includes("power-washing")) {
+    return "a website for a power-washing company";
+  }
+
+  if (lower.includes("website")) {
+    return "a website project";
+  }
+
+  if (lower.includes("software")) {
+    return "a software project";
+  }
+
+  if (lower.includes("tool")) {
+    return "a custom tool";
+  }
+
+  return cleaned;
+}
+
 function showNextPrompt() {
   if (state.inPreview) {
     return;
   }
 
-  const nextField = FIELD_SEQUENCE.find((field) => {
-    if (field === state.pendingField) {
-      return true;
+  const nextField = getNextFieldToAsk();
+  if (!nextField) {
+    if (isRequiredComplete() && !state.reportVisible) {
+      addBubble("I believe I have the shape of it. Shall I prepare this for Saeva?", "imp");
+      state.pendingField = null;
+      state.reportVisible = true;
+      loadPreview();
+      announce("Report preview ready. Review and approve the inquiry.");
     }
-    return Boolean(state.inquiry[field]) || field === "questions_or_comments_for_saeva";
-  });
-
-  if (nextField && state.pendingField !== nextField) {
-    state.pendingField = nextField;
+    return;
   }
 
-  if (!state.pendingField) {
-    state.pendingField = "questions_or_comments_for_saeva";
-  }
+  state.pendingField = nextField;
 
   if (isRequiredComplete() && !state.reportVisible) {
     addBubble("I believe I have the shape of it. Shall I prepare this for Saeva?", "imp");
@@ -129,7 +212,7 @@ function showNextPrompt() {
     return;
   }
 
-  const prompt = PROMPT_TEXT[state.pendingField];
+  const prompt = PROMPT_TEXT[nextField];
   addBubble(prompt, "imp");
   announce(prompt);
 }
@@ -143,8 +226,7 @@ function handleAnswer(raw) {
 
   if (state.pendingField && OPTIONAL_FIELDS.has(state.pendingField) && /^skip$/i.test(text)) {
     state.inquiry[state.pendingField] = "";
-    const nextField = FIELD_SEQUENCE[FIELD_SEQUENCE.indexOf(state.pendingField) + 1] || null;
-    state.pendingField = nextField;
+    state.pendingField = getNextFieldToAsk();
     updateProgress();
     showNextPrompt();
     return;
@@ -159,10 +241,23 @@ function handleAnswer(raw) {
   }
 
   if (state.pendingField) {
-    state.inquiry[state.pendingField] = text;
+    const capturedValue = state.pendingField === "project_summary" ? extractProjectSummary(text) : text;
+    state.inquiry[state.pendingField] = capturedValue;
+    if (state.pendingField === "project_summary") {
+      const inferredName = extractVisitorName(text);
+      if (inferredName && !state.inquiry.visitor_name) {
+        state.inquiry.visitor_name = inferredName;
+      }
+    }
     updateProgress();
-    const nextField = FIELD_SEQUENCE[FIELD_SEQUENCE.indexOf(state.pendingField) + 1] || null;
-    state.pendingField = nextField;
+    state.pendingField = getNextFieldToAsk();
+  }
+
+  if (state.pendingField === "desired_outcome" && state.inquiry.project_summary) {
+    const acknowledgement = `${summarizeProjectSummary(state.inquiry.project_summary)}. Very good. What should it accomplish for the business?`;
+    addBubble(acknowledgement, "imp");
+    announce("What should it accomplish for the business?");
+    return;
   }
 
   if (isRequiredComplete()) {
@@ -311,7 +406,6 @@ transcript.addEventListener("click", (event) => {
 window.addEventListener("DOMContentLoaded", () => {
   addBubble("Welcome to Sovereign Flame. I am IMP, the Interactive Model Processor. What are we building for you?", "imp");
   state.pendingField = "project_summary";
-  showNextPrompt();
   updateProgress();
   announce("Conversation started.");
 });
